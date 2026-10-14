@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tones are referenced by name (android.resource://.../raw/<name>), so keep them through shrinking. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@raw/*" />
