@@ -1,7 +1,8 @@
 # Builds the signed TierTone APK and publishes it as a GitHub Release.
 #
-#   git tag v0.2.1 && git push origin v0.2.1   -> builds, tests, and publishes "TierTone v0.2.1"
-#   Actions tab -> "Release APK" -> Run workflow -> builds and attaches the APK to the run only
+#   Actions tab -> "Release APK" -> Run workflow, version 0.2.1 -> tags v0.2.1 and publishes "TierTone 0.2.1"
+#   Actions tab -> "Release APK" -> Run workflow, version empty -> builds and attaches the APK to the run only
+#   git tag v0.2.1 && git push origin v0.2.1                    -> same as the first line
 #
 # Every build is signed with the same release key (stored as repository secrets, see README),
 # so a newer APK always installs over an older one.
@@ -12,6 +13,11 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish, e.g. 0.2.1 (creates tag v0.2.1). Leave empty to build without publishing.
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -40,13 +46,24 @@ jobs:
 
       - name: Work out the version
         id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
+          publish=true
           if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             version="${GITHUB_REF_NAME#v}"
+          elif [[ -n "$INPUT_VERSION" ]]; then
+            version="${INPUT_VERSION#v}"
           else
             version="$(node -p "require('./package.json').version")"
+            publish=false
+          fi
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must look like 1.2.3 (got '$version')."
+            exit 1
           fi
           echo "name=$version" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
 
       - name: Restore the signing key
         env:
@@ -88,9 +105,12 @@ jobs:
           if-no-files-found: error
 
       - name: Publish the release
-        if: github.ref_type == 'tag'
+        if: steps.version.outputs.publish == 'true'
         uses: softprops/action-gh-release@v3
         with:
+          # Creates the tag on GitHub when it doesn't exist yet (manual runs).
+          tag_name: v${{ steps.version.outputs.name }}
+          target_commitish: ${{ github.sha }}
           name: TierTone ${{ steps.version.outputs.name }}
           files: out/*.apk
           generate_release_notes: true

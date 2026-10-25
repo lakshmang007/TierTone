@@ -27,17 +27,18 @@ file installs), open App info, tap ⋮ and choose "Allow restricted settings".
 
 ## Releases
 
-`.github/workflows/release.yml` builds, tests, signs and publishes the APK whenever a version tag
-is pushed:
+`.github/workflows/release.yml` builds, tests, signs and publishes the APK.
 
-```bash
-git tag v0.2.1
-git push origin v0.2.1
-```
+**To publish a version:** on GitHub, open **Actions → Release APK → Run workflow**, type a version
+such as `0.2.1`, and run it. A few minutes later the release appears on the Releases page with
+`TierTone-0.2.1.apk` attached, and the tag `v0.2.1` is created on GitHub. Leave the version empty to
+build an APK without publishing it (it's attached to the workflow run instead).
 
-A few minutes later the release appears on the Releases page with `TierTone-0.2.1.apk` attached.
-The version comes from the tag (`v1.2.3` → versionName 1.2.3, versionCode 10203). You can also
-run the workflow by hand from the Actions tab; that build is attached to the run, not published.
+Pushing a tag does the same (`git tag v0.2.1 && git push origin v0.2.1`), as long as local tag
+signing works.
+
+The version sets both numbers: `1.2.3` → versionName 1.2.3, versionCode 10203. Always publish a
+higher version than the last one, or phones will refuse the update.
 
 **Signing.** Every release is signed with the same key, so updates install over each other. The key
 is `android/tiertone-release.jks`, and its passwords are in `android/keystore.properties`. Both
