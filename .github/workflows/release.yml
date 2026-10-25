@@ -1,0 +1,108 @@
+# Builds the signed TierTone APK and publishes it as a GitHub Release.
+#
+#   git tag v0.2.1 && git push origin v0.2.1   -> builds, tests, and publishes "TierTone v0.2.1"
+#   Actions tab -> "Release APK" -> Run workflow -> builds and attaches the APK to the run only
+#
+# Every build is signed with the same release key (stored as repository secrets, see README),
+# so a newer APK always installs over an older one.
+
+name: Release APK
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Work out the version
+        id: version
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(node -p "require('./package.json').version")"
+          fi
+          echo "name=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [[ -z "$KEYSTORE_BASE64" || -z "$KEYSTORE_PASSWORD" || -z "$KEY_ALIAS" || -z "$KEY_PASSWORD" ]]; then
+            echo "::error::Signing secrets are missing. Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD under Settings > Secrets and variables > Actions (see README > Releases)."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/tiertone-release.jks
+          {
+            echo "storeFile=tiertone-release.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > android/keystore.properties
+
+      - name: Build the web app
+        run: |
+          npm ci
+          npm run build
+          npx cap sync android
+
+      - name: Test and build the APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleRelease -PappVersion=${{ steps.version.outputs.name }}
+          mkdir -p ../out
+          cp app/build/outputs/apk/release/app-release.apk "../out/TierTone-${{ steps.version.outputs.name }}.apk"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: TierTone-${{ steps.version.outputs.name }}
+          path: out/*.apk
+          if-no-files-found: error
+
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v3
+        with:
+          name: TierTone ${{ steps.version.outputs.name }}
+          files: out/*.apk
+          generate_release_notes: true
+          body: |
+            ## Install on your phone (Android 8 or newer)
+
+            1. Download **TierTone-${{ steps.version.outputs.name }}.apk** from *Assets* below.
+            2. Open it and allow installing from your browser or Files app when asked.
+            3. If Play Protect says the app was blocked, it's because TierTone asks for notification access.
+               Either install over USB (`adb install -r TierTone-${{ steps.version.outputs.name }}.apk`), or turn off
+               *Play Store → Play Protect → Settings → Scan apps with Play Protect*, install, then turn it back on.
+            4. On Android 13+, if the notification-access switch is greyed out: *Settings → Apps → TierTone → ⋮ →
+               Allow restricted settings*.
+
+            Newer versions install over older ones and keep your rules.

@@ -9,7 +9,7 @@ import struct
 import wave
 
 RATE = 22050
-OUT = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "res", "raw")
+OUT = os.path.join(os.path.dirname(__file__), "..", "android", "app", "src", "main", "res", "raw")
 
 
 def note(freq, dur, decay, partials=((1.0, 1.0),), attack=0.006):

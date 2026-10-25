@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand">#4F46E5</color>
+    <color name="brand_dark">#4338CA</color>
+    <!-- Matches the React page background, so there is no flash while the WebView loads. -->
+    <color name="page_background">#FBFBFE</color>
+</resources>

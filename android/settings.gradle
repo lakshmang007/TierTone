@@ -1,0 +1,7 @@
+include ':app'
+// Debug helper app that posts WhatsApp-like chats, for testing TierTone on real phones.
+include ':sender'
+include ':capacitor-cordova-android-plugins'
+project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
+
+apply from: 'capacitor.settings.gradle'

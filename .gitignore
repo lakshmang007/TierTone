@@ -1,13 +1,27 @@
+# Web
+node_modules/
+dist/
+*.local
+*.log
+
+# Android / Gradle (android/ also has Capacitor's own .gitignore)
 *.iml
 .gradle/
 .kotlin/
-/local.properties
-/.idea/
-.DS_Store
 build/
-/captures/
+local.properties
 .externalNativeBuild/
 .cxx/
+captures/
+
+# Signing secrets (see README: Releases)
 keystore.properties
 *.jks
 *.keystore
+release-secrets.txt
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
