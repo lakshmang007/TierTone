@@ -40,6 +40,7 @@ data class Vip(
     val lookupKey: String? = null,
     val aliases: List<String> = emptyList(),
     val sound: String = Sounds.DEFAULT_VIP,
+    val vibration: String = Vibrations.DEFAULT_VIP,
     val addedAt: Long = 0,
 )
 
@@ -57,6 +58,10 @@ data class Config(
     val vipBypassDnd: Boolean = false,
     val importantSound: String = Sounds.DEFAULT_IMPORTANT,
     val normalSound: String = Sounds.DEFAULT_NORMAL,
+    /** Silent mode: no sounds at all; each priority is told apart by its vibration pattern. */
+    val silentMode: Boolean = false,
+    val importantVibration: String = Vibrations.DEFAULT_IMPORTANT,
+    val normalVibration: String = Vibrations.DEFAULT_NORMAL,
     val appTiers: Map<String, Tier> = emptyMap(),
     val vips: List<Vip> = emptyList(),
 ) {
@@ -68,6 +73,12 @@ data class Config(
         Tier.IMPORTANT -> importantSound
         Tier.NORMAL -> normalSound
         Tier.MUTED -> Sounds.SILENT
+    }
+
+    fun vibrationFor(tier: Tier): String = when (tier) {
+        Tier.IMPORTANT -> importantVibration
+        Tier.NORMAL -> normalVibration
+        Tier.MUTED -> Vibrations.NONE
     }
 
     /** "Reset rules": forget every app tier, VIP and sound choice, but keep onboarding done. */
@@ -96,4 +107,33 @@ object Sounds {
 
     fun builtInLabel(token: String): String? =
         if (token.startsWith(APP_PREFIX)) BUILT_IN.firstOrNull { APP_PREFIX + it.first == token }?.second else null
+}
+
+/**
+ * Vibration patterns, so priorities can be told apart by feel (and in Silent mode, only by feel).
+ * Patterns use Android's format: wait, buzz, wait, buzz... in milliseconds. Tokens and labels
+ * match VIBRATIONS in src/model.ts.
+ */
+object Vibrations {
+    const val NONE = "none"
+    const val DEFAULT = "default"
+
+    /** token to (label, pattern). */
+    val PATTERNS: Map<String, Pair<String, LongArray>> = linkedMapOf(
+        "short" to ("Short buzz" to longArrayOf(0, 200)),
+        "double" to ("Double buzz" to longArrayOf(0, 150, 120, 150)),
+        "triple" to ("Triple buzz" to longArrayOf(0, 120, 100, 120, 100, 120)),
+        "long" to ("Long buzz" to longArrayOf(0, 650)),
+        "heartbeat" to ("Heartbeat" to longArrayOf(0, 100, 90, 320)),
+        "rapid" to ("Rapid pulses" to longArrayOf(0, 60, 60, 60, 60, 60, 60, 60, 60, 60)),
+    )
+
+    /** Android's default notification vibration, used to preview "Phone default". */
+    val SYSTEM_DEFAULT = longArrayOf(0, 250, 250, 250)
+
+    const val DEFAULT_IMPORTANT = "double"
+    const val DEFAULT_NORMAL = "short"
+    const val DEFAULT_VIP = "heartbeat"
+
+    fun pattern(token: String): LongArray? = PATTERNS[token]?.second
 }

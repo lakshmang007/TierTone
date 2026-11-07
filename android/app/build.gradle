@@ -9,7 +9,7 @@ if (keystoreFile.exists()) keystoreFile.withInputStream { keystore.load(it) }
 
 // The release workflow passes -PappVersion=1.2.3 from the git tag. The version code is derived
 // from it (1.2.3 -> 10203), so every newer release installs over the previous one.
-def appVersion = (project.findProperty('appVersion') ?: '0.2.0').toString()
+def appVersion = (project.findProperty('appVersion') ?: '0.3.0').toString()
 def versionParts = (appVersion.tokenize('.-') + ['0', '0', '0']).take(3).collect { it.isInteger() ? it.toInteger() : 0 }
 def appVersionCode = versionParts[0] * 10000 + versionParts[1] * 100 + versionParts[2]
 

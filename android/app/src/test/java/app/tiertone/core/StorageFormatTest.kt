@@ -15,10 +15,34 @@ class StorageFormatTest {
             vipBypassDnd = true,
             importantSound = "app:chime",
             normalSound = "content://media/internal/audio/media/12",
+            silentMode = true,
+            importantVibration = "rapid",
+            normalVibration = Vibrations.NONE,
             appTiers = mapOf("com.slack" to Tier.IMPORTANT, "com.game" to Tier.MUTED),
-            vips = listOf(Vip("a1", "Mom", listOf("+1 555"), "lk", listOf("Mum"), "app:bell", 99)),
+            vips = listOf(
+                Vip(
+                    id = "a1", name = "Mom", phones = listOf("+1 555"), lookupKey = "lk", aliases = listOf("Mum"),
+                    sound = "app:bell", vibration = "long", addedAt = 99,
+                ),
+            ),
         )
         assertEquals(c, ConfigJson.decode(ConfigJson.encode(c)))
+    }
+
+    @Test fun rulesFromBeforeVibrationsGetDefaultPatterns() {
+        val c = ConfigJson.decode("""{"importantSound":"app:rise","vips":[{"id":"m","name":"Mom","sound":"app:bell"}]}""")
+        assertEquals(false, c.silentMode)
+        assertEquals(Vibrations.DEFAULT_IMPORTANT, c.importantVibration)
+        assertEquals(Vibrations.DEFAULT_NORMAL, c.normalVibration)
+        assertEquals(Vibrations.DEFAULT_VIP, c.vips.single().vibration)
+    }
+
+    @Test fun eachPriorityFeelsDifferentByDefault() {
+        val c = Config()
+        val defaults = listOf(c.vibrationFor(Tier.IMPORTANT), c.vibrationFor(Tier.NORMAL), Vibrations.DEFAULT_VIP)
+        assertEquals(defaults.size, defaults.toSet().size)
+        defaults.forEach { assertTrue("$it has a pattern", Vibrations.pattern(it) != null) }
+        assertEquals(Vibrations.NONE, c.vibrationFor(Tier.MUTED))
     }
 
     @Test fun missingFieldsFallBackToDefaults() {

@@ -16,6 +16,7 @@ export interface TierTonePlugin {
   soundLabels(options: { tokens: string[] }): Promise<Record<string, string>>
   previewSound(options: { token: string }): Promise<void>
   stopPreview(): Promise<void>
+  previewVibration(options: { token: string }): Promise<void>
   shareText(options: { text: string; title?: string }): Promise<void>
   clearCrashReport(): Promise<void>
 }

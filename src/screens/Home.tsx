@@ -1,3 +1,4 @@
+import { Icon } from '../components/icons'
 import { AppIcon, Card, LaneBadge, LaneIcon, ScreenTitle, Switch, WarningCard } from '../components/ui'
 import { clock, isPaused, pauseFor, plural, relativeTime, resume, setEnabled, type Lane } from '../model'
 import { TierTone } from '../native/tiertone'
@@ -37,7 +38,9 @@ export function Home({ app, openApps, openVips }: { app: AppHandle; openApps: ()
                   ? 'Every app is using its own sound.'
                   : isPaused(c, now)
                     ? 'Apps keep their own sounds until then.'
-                    : `${plural(Object.keys(c.apps).length, 'app')} sorted · ${plural(c.vips.length, 'VIP')}`}
+                    : `${plural(Object.keys(c.apps).length, 'app')} sorted · ${plural(c.vips.length, 'VIP')}${
+                        c.silentMode ? ' · Silent mode: vibrations only' : ''
+                      }`}
               </div>
             </div>
             <Switch checked={c.enabled} onChange={(on) => app.update((x) => setEnabled(x, on))} label="TierTone on" />
@@ -48,7 +51,19 @@ export function Home({ app, openApps, openVips }: { app: AppHandle; openApps: ()
                 Resume now
               </button>
             ) : (
-              <PauseChips app={app} />
+              <>
+                <PauseChips app={app} />
+                <div className="chips">
+                  <button
+                    className={`chip with-icon ${c.silentMode ? 'selected' : ''}`}
+                    aria-pressed={c.silentMode}
+                    onClick={() => app.update((x) => ({ ...x, silentMode: !x.silentMode }))}
+                  >
+                    <Icon name={c.silentMode ? 'bellOff' : 'bell'} size={18} />
+                    {c.silentMode ? 'Silent mode on' : 'Silent mode'}
+                  </button>
+                </div>
+              </>
             ))}
         </Card>
       )}

@@ -5,6 +5,9 @@ UI in **React 19 + TypeScript + Vite**, wrapped as an Android APK with **Capacit
 notification engine is native Kotlin, because Android only lets native code read notifications.
 No internet permission, no contacts permission.
 
+**Just want to see how it works?** Try the [Expo Go demo](expo-demo/README.md): the same screens
+and tier sounds with simulated notifications, on any phone, without installing the APK.
+
 ## Install on your phone
 
 **Download:** open the repository's **Releases** page on your phone and download
@@ -77,6 +80,10 @@ tools/gen_sounds.py      Generates the six bundled tones
 - **SorterService** (native, main process) assigns every notification a tier. For handled ones it
   posts a copy on that tier's or VIP's channel, then cancels the original so the sound really
   changes. Calls, alarms, media, navigation and similar are never touched.
+- **Silent mode and vibrations**: every tier and VIP has a vibration pattern as well as a sound
+  (Short, Double, Triple, Long, Heartbeat, Rapid, phone default or none). Silent mode turns all
+  sounds off so you tell priorities apart by feel; Muted never vibrates. It works with the phone on
+  ring or Vibrate; a fully muted phone blocks vibrations, except VIPs set to ring through Silent.
 - **Two processes**: the WebView UI lives in `:ui` and is freed when you close the app. Measured on
   an API 35 emulator (release build): the always-on listener uses **7.7 MB PSS**; with the app open,
   the UI process uses about 80 MB plus about 82 MB for the WebView renderer.

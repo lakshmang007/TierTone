@@ -6,6 +6,8 @@
         served locally by Capacitor), and no READ_CONTACTS (VIPs come from the system picker).
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Only to preview vibration patterns in the app; notifications vibrate via their channels. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- Lets the Apps screen list launchable apps without QUERY_ALL_PACKAGES. -->
     <queries>

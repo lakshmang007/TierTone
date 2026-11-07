@@ -1,5 +1,5 @@
 import { WebPlugin } from '@capacitor/core'
-import { defaultConfig, type AppInfo, type Config, type Entry, type Lane, type NativeState } from '../model'
+import { defaultConfig, vibrationPattern, type AppInfo, type Config, type Entry, type Lane, type NativeState } from '../model'
 import type { SettingsScreen, TierTonePlugin } from './tiertone'
 
 // Browser stand-in for the native plugin, so the UI can be developed with `npm run dev`.
@@ -101,6 +101,12 @@ export class TierToneWeb extends WebPlugin implements TierTonePlugin {
 
   async previewSound() {}
   async stopPreview() {}
+
+  async previewVibration({ token }: { token: string }) {
+    const pattern = vibrationPattern(token)
+    // Strip Android's leading wait; browsers that support it buzz, others ignore it.
+    if (pattern && 'vibrate' in navigator) navigator.vibrate(pattern.slice(1))
+  }
 
   async shareText({ text }: { text: string }) {
     console.info('share', text)

@@ -11,6 +11,7 @@ export interface Vip {
   lookupKey?: string
   aliases: string[]
   sound: string
+  vibration: string
   addedAt: number
 }
 
@@ -25,6 +26,10 @@ export interface Config {
   vipBypassDnd: boolean
   importantSound: string
   normalSound: string
+  /** Silent mode: no sounds at all; each priority is told apart by its vibration pattern. */
+  silentMode: boolean
+  importantVibration: string
+  normalVibration: string
   apps: Record<string, Tier>
   vips: Vip[]
 }
@@ -93,6 +98,27 @@ export const DEFAULT_SOUND = 'default'
 export const SILENT = 'silent'
 const DEFAULT_VIP_SOUND = 'app:bell'
 
+export const VIBRATE_DEFAULT = 'default'
+export const VIBRATE_NONE = 'none'
+
+/**
+ * Vibration patterns, as Android's wait, buzz, wait, buzz... in milliseconds. Same tokens, labels
+ * and patterns as Vibrations in android/.../core/Model.kt.
+ */
+export const VIBRATIONS: { token: string; label: string; pattern: number[] }[] = [
+  { token: 'short', label: 'Short buzz', pattern: [0, 200] },
+  { token: 'double', label: 'Double buzz', pattern: [0, 150, 120, 150] },
+  { token: 'triple', label: 'Triple buzz', pattern: [0, 120, 100, 120, 100, 120] },
+  { token: 'long', label: 'Long buzz', pattern: [0, 650] },
+  { token: 'heartbeat', label: 'Heartbeat', pattern: [0, 100, 90, 320] },
+  { token: 'rapid', label: 'Rapid pulses', pattern: [0, 60, 60, 60, 60, 60, 60, 60, 60, 60] },
+]
+/** Android's default notification vibration, used to preview "Phone default". */
+const SYSTEM_DEFAULT_VIBRATION = [0, 250, 250, 250]
+const DEFAULT_IMPORTANT_VIBRATION = 'double'
+const DEFAULT_NORMAL_VIBRATION = 'short'
+const DEFAULT_VIP_VIBRATION = 'heartbeat'
+
 /** VIP matching starts with these chat apps (same list as RuleEngine.CHAT_APPS). */
 export const CHAT_APPS = new Set([
   'com.whatsapp',
@@ -112,12 +138,40 @@ export function defaultConfig(onboarded = false): Config {
     vipBypassDnd: false,
     importantSound: 'app:rise',
     normalSound: DEFAULT_SOUND,
+    silentMode: false,
+    importantVibration: DEFAULT_IMPORTANT_VIBRATION,
+    normalVibration: DEFAULT_NORMAL_VIBRATION,
     apps: {},
     vips: [],
   }
 }
 
+/** Fills in fields added after a rules object was saved (e.g. vibrations), keeping everything else. */
+export function withDefaults(saved: Partial<Config>): Config {
+  const c = { ...defaultConfig(saved.onboarded ?? false), ...saved }
+  return { ...c, vips: c.vips.map((v) => ({ ...v, vibration: v.vibration ?? DEFAULT_VIP_VIBRATION })) }
+}
+
 export const isPaused = (c: Config, now: number) => c.enabled && now < c.pausedUntil
+
+export function vibrationFor(c: Config, tier: Tier): string {
+  if (tier === 'important') return c.importantVibration
+  if (tier === 'normal') return c.normalVibration
+  return VIBRATE_NONE
+}
+
+export function vibrationLabel(token: string): string {
+  if (token === VIBRATE_DEFAULT) return 'Phone default'
+  if (token === VIBRATE_NONE) return 'No vibration'
+  return VIBRATIONS.find((v) => v.token === token)?.label ?? 'Phone default'
+}
+
+/** The pattern to play for a token, or null for no vibration. */
+export function vibrationPattern(token: string): number[] | null {
+  if (token === VIBRATE_NONE) return null
+  if (token === VIBRATE_DEFAULT) return SYSTEM_DEFAULT_VIBRATION
+  return VIBRATIONS.find((v) => v.token === token)?.pattern ?? SYSTEM_DEFAULT_VIBRATION
+}
 
 export function soundFor(c: Config, tier: Tier): string {
   if (tier === 'important') return c.importantSound
@@ -162,6 +216,7 @@ export function addVip(c: Config, picked: PickedContact): { config: Config; vip:
     phones: picked.number ? [picked.number] : [],
     aliases: [],
     sound: DEFAULT_VIP_SOUND,
+    vibration: DEFAULT_VIP_VIBRATION,
     addedAt: Date.now(),
   }
   if (picked.lookupKey) vip.lookupKey = picked.lookupKey

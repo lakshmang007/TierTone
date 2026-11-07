@@ -13,6 +13,9 @@ import android.media.Ringtone
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.ContactsContract
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
@@ -28,6 +31,7 @@ import app.tiertone.core.Lane
 import app.tiertone.core.SoundUris
 import app.tiertone.core.Sounds
 import app.tiertone.core.StatsStore
+import app.tiertone.core.Vibrations
 import app.tiertone.service.SorterService
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
@@ -295,6 +299,21 @@ class TierTonePlugin : Plugin() {
     @PluginMethod
     fun stopPreview(call: PluginCall) {
         stopPreviewInternal()
+        call.resolve()
+    }
+
+    /** Lets the user feel a vibration pattern while choosing it. */
+    @PluginMethod
+    fun previewVibration(call: PluginCall) {
+        val token = call.getString("token") ?: Vibrations.DEFAULT
+        val pattern = if (token == Vibrations.DEFAULT) Vibrations.SYSTEM_DEFAULT else Vibrations.pattern(token)
+        val vibrator = if (Build.VERSION.SDK_INT >= 31) {
+            context.getSystemService(VibratorManager::class.java).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Vibrator::class.java)
+        }
+        if (pattern != null && vibrator.hasVibrator()) vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
         call.resolve()
     }
 

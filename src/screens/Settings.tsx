@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Icon } from '../components/icons'
-import { SoundPicker, useSoundLabel } from '../components/SoundPicker'
+import { TonePicker, useToneSummary } from '../components/SoundPicker'
 import { Dialog, Row, ScreenTitle, SectionLabel, SwitchRow } from '../components/ui'
-import { clock, isPaused, resetRules, resume, setEnabled, soundFor, type Tier } from '../model'
+import { clock, isPaused, resetRules, resume, setEnabled, soundFor, vibrationFor, vibrationLabel, type Tier } from '../model'
 import { TierTone } from '../native/tiertone'
 import type { AppHandle } from '../useTierTone'
 import { PauseChips } from './Home'
@@ -16,10 +16,10 @@ const PRIVACY = [
 
 export function Settings({ app }: { app: AppHandle }) {
   const { config: c, access, now, crashReport, version } = app.state
-  const [soundFor_, setSoundFor] = useState<Tier | null>(null)
+  const [picking, setPicking] = useState<Tier | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
-  const importantLabel = useSoundLabel(c.importantSound)
-  const normalLabel = useSoundLabel(c.normalSound)
+  const importantTone = useToneSummary(c.importantSound, c.importantVibration, c.silentMode)
+  const normalTone = useToneSummary(c.normalSound, c.normalVibration, c.silentMode)
 
   return (
     <main className="screen">
@@ -53,10 +53,15 @@ export function Settings({ app }: { app: AppHandle }) {
         onChange={(on) => app.update((x) => ({ ...x, sortUnlisted: on }))}
       />
 
-      <SectionLabel>Sounds</SectionLabel>
-      <Row title="Important" subtitle={importantLabel} onClick={() => setSoundFor('important')} />
-      <Row title="Normal" subtitle={normalLabel} onClick={() => setSoundFor('normal')} />
-      <Row title="Muted" subtitle="Always silent" />
+      <SectionLabel>Sounds & vibration</SectionLabel>
+      <SilentModeRow app={app} />
+      <Row title="Important" subtitle={importantTone} onClick={() => setPicking('important')} />
+      <Row title="Normal" subtitle={normalTone} onClick={() => setPicking('normal')} />
+      <Row title="Muted" subtitle="No sound, no vibration" />
+      <p className="small muted">
+        VIPs each have their own sound and vibration: set them on the VIPs tab. Silent mode works with your phone on ring or
+        Vibrate. If the phone itself is fully muted, Android stops all vibrations, except VIPs set to ring through Silent.
+      </p>
       <Row
         title="Vibration, pop-ups and lock screen"
         subtitle="Fine-tune each tier in Android's notification settings"
@@ -118,13 +123,18 @@ export function Settings({ app }: { app: AppHandle }) {
       )}
       <p className="small muted">TierTone {version}</p>
 
-      {soundFor_ && (
-        <SoundPicker
-          title={`${soundFor_ === 'important' ? 'Important' : 'Normal'} sound`}
-          current={soundFor(c, soundFor_)}
-          onClose={() => setSoundFor(null)}
-          onPick={(token) =>
-            app.update((x) => (soundFor_ === 'important' ? { ...x, importantSound: token } : { ...x, normalSound: token }))
+      {picking && (
+        <TonePicker
+          title={picking === 'important' ? 'Important' : 'Normal'}
+          current={{ sound: soundFor(c, picking), vibration: vibrationFor(c, picking) }}
+          silentMode={c.silentMode}
+          onClose={() => setPicking(null)}
+          onPick={({ sound, vibration }) =>
+            app.update((x) =>
+              picking === 'important'
+                ? { ...x, importantSound: sound, importantVibration: vibration }
+                : { ...x, normalSound: sound, normalVibration: vibration },
+            )
           }
         />
       )}
@@ -161,5 +171,21 @@ function Status({ ok }: { ok: boolean }) {
     <Icon name="check" className="status-ok" />
   ) : (
     <Icon name="warning" className="status-bad" />
+  )
+}
+
+/** Silent mode: no sounds; each priority keeps its own vibration so you can tell them apart by feel. */
+export function SilentModeRow({ app }: { app: AppHandle }) {
+  const c = app.state.config
+  const vipFeel = c.vips.length === 1 ? vibrationLabel(c.vips[0].vibration) : 'their own pattern'
+  return (
+    <SwitchRow
+      title="Silent mode"
+      subtitle={`No sounds. You feel who it is instead: VIPs ${vipFeel}, Important ${vibrationLabel(
+        c.importantVibration,
+      )}, Normal ${vibrationLabel(c.normalVibration)}. Muted stays still.`}
+      checked={c.silentMode}
+      onChange={(on) => app.update((x) => ({ ...x, silentMode: on }))}
+    />
   )
 }

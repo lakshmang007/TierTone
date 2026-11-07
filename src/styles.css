@@ -294,6 +294,21 @@ ul {
   background: color-mix(in srgb, var(--primary) 20%, transparent);
   border-color: transparent;
 }
+.chip.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.picker-heading {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-top: 4px;
+}
+.dim {
+  opacity: 0.55;
+}
 
 /* ---------- Switch ---------- */
 

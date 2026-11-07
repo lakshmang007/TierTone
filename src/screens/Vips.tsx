@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Icon } from '../components/icons'
-import { SoundPicker, useSoundLabel } from '../components/SoundPicker'
+import { TonePicker, useToneSummary } from '../components/SoundPicker'
 import { Card, Dialog, LaneBadge, LaneIcon, Row, ScreenTitle, SwitchRow } from '../components/ui'
 import { addVip, removeVip, updateVip, type Vip } from '../model'
 import { TierTone } from '../native/tiertone'
@@ -66,7 +66,7 @@ export function Vips({ app }: { app: AppHandle }) {
       )}
       <ul className="vip-list">
         {c.vips.map((v) => (
-          <VipRow key={v.id} vip={v} onClick={() => setEditing(v.id)} />
+          <VipRow key={v.id} vip={v} silentMode={c.silentMode} onClick={() => setEditing(v.id)} />
         ))}
       </ul>
 
@@ -80,8 +80,8 @@ export function Vips({ app }: { app: AppHandle }) {
   )
 }
 
-function VipRow({ vip, onClick }: { vip: Vip; onClick: () => void }) {
-  const sound = useSoundLabel(vip.sound)
+function VipRow({ vip, silentMode, onClick }: { vip: Vip; silentMode: boolean; onClick: () => void }) {
+  const tone = useToneSummary(vip.sound, vip.vibration, silentMode)
   const details = [vip.phones[0], vip.aliases.length ? `also ${vip.aliases.join(', ')}` : ''].filter(Boolean).join(' · ')
   return (
     <li className="vip-row" onClick={onClick}>
@@ -90,7 +90,7 @@ function VipRow({ vip, onClick }: { vip: Vip; onClick: () => void }) {
         <div className="row-title">{vip.name}</div>
         {details && <div className="row-sub">{details}</div>}
       </div>
-      <LaneBadge lane="vip" text={sound} />
+      <LaneBadge lane="vip" text={tone} />
     </li>
   )
 }
@@ -99,7 +99,8 @@ function VipEditor({ vip, app, onClose }: { vip: Vip; app: AppHandle; onClose: (
   const [aliases, setAliases] = useState(vip.aliases.join(', '))
   const [picking, setPicking] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState(false)
-  const sound = useSoundLabel(vip.sound)
+  const silentMode = app.state.config.silentMode
+  const tone = useToneSummary(vip.sound, vip.vibration, silentMode)
 
   const close = () => {
     const list = [...new Set(aliases.split(',').map((a) => a.trim()).filter(Boolean))]
@@ -120,16 +121,17 @@ function VipEditor({ vip, app, onClose }: { vip: Vip; app: AppHandle; onClose: (
       >
         {vip.phones.length > 0 && <p className="muted">{vip.phones.join('\n')}</p>}
         <Row
-          title="Sound"
-          subtitle={sound}
+          title="Sound & vibration"
+          subtitle={tone}
           onClick={() => setPicking(true)}
           trailing={
             <button
               className="icon-btn"
-              aria-label="Play sound"
+              aria-label="Play sound and vibration"
               onClick={(e) => {
                 e.stopPropagation()
-                void TierTone.previewSound({ token: vip.sound })
+                if (!silentMode) void TierTone.previewSound({ token: vip.sound })
+                void TierTone.previewVibration({ token: vip.vibration })
               }}
             >
               <Icon name="play" />
@@ -147,11 +149,12 @@ function VipEditor({ vip, app, onClose }: { vip: Vip; app: AppHandle; onClose: (
       </Dialog>
 
       {picking && (
-        <SoundPicker
-          title={`Sound for ${vip.name}`}
-          current={vip.sound}
+        <TonePicker
+          title={vip.name}
+          current={{ sound: vip.sound, vibration: vip.vibration }}
+          silentMode={silentMode}
           onClose={() => setPicking(false)}
-          onPick={(token) => app.update((c) => updateVip(c, { ...vip, sound: token }))}
+          onPick={({ sound, vibration }) => app.update((c) => updateVip(c, { ...vip, sound, vibration }))}
         />
       )}
       {confirmRemove && (
